@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <title>41校網小一統一派位實時攪珠與千次勝率分析系統</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --panel-bg: #131b2e;
+      --card-bg: #1a243b;
+      --border: #263554;
+      --accent: #ff007f;
+      --gold: #f59e0b;
+      --green: #10b981;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --text: #f8fafc;
+      --text-sub: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang HK", sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; }
+    .layout { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+
+    /* 左側面板：籤號與拖曳志願 */
+    .panel { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 15px; }
+    .panel-header { font-size: 1.15rem; font-weight: bold; color: var(--gold); display: flex; justify-content: space-between; align-items: center; }
+    
+    /* 號碼牌 */
+    .ticket-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 2px solid var(--accent); border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 4px 15px rgba(255,0,127,0.15); }
+    .ticket-lbl { font-size: 0.8rem; color: var(--text-sub); }
+    .ticket-num { font-size: 2.2rem; font-weight: 900; font-family: monospace; color: #fff; letter-spacing: 2px; text-shadow: 0 0 12px rgba(255,0,127,0.6); }
+    .ticket-sub { display: flex; justify-content: space-around; font-size: 0.82rem; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px; }
+    .ticket-badge { padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+    .badge-good { background: rgba(16,185,129,0.2); color: var(--green); }
+    .badge-mid { background: rgba(245,158,11,0.2); color: var(--gold); }
+    .badge-back { background: rgba(239,68,68,0.2); color: var(--red); }
+
+    /* 拖曳志願列表 */
+    .tag-title { font-size: 0.85rem; color: var(--text-sub); }
+    .tag-list { display: flex; flex-direction: column; gap: 7px; max-height: 480px; overflow-y: auto; padding-right: 2px; }
+    .sch-tag { background: #0b1120; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; user-select: none; transition: 0.2s; cursor: grab; }
+    .sch-tag.top-tag { border-color: var(--gold); background: rgba(245,158,11,0.12); }
+    .sch-tag-rank { width: 50px; font-weight: bold; font-size: 0.85rem; color: var(--gold); }
+    .sch-tag-name { flex-grow: 1; font-size: 0.85rem; }
+    .sch-tag-btns { display: flex; gap: 4px; }
+    .btn-arrow { background: #1e293b; border: 1px solid #334155; color: #fff; width: 22px; height: 22px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+    .btn-arrow:hover { background: var(--accent); }
+
+    /* 右側主視圖 */
+    .main-view { display: flex; flex-direction: column; gap: 15px; }
+
+    /* 攪珠控制大看板 */
+    .machine-deck { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px; display: grid; grid-template-columns: 240px 1fr 200px; gap: 20px; align-items: center; }
+    
+    /* 攪珠機畫布 */
+    .tumbler-box { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    #tumblerCanvas { background: radial-gradient(circle, #1a243b 0%, #0b0f19 80%); border-radius: 50%; border: 3px solid rgba(255,255,255,0.1); box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.05); }
+
+    /* 中間流水進度大字 */
+    .stream-status { display: flex; flex-direction: column; gap: 6px; }
+    .stream-headline { font-size: 0.85rem; color: var(--text-sub); }
+    .stream-current-no { font-size: 2.6rem; font-weight: 900; font-family: monospace; color: var(--blue); text-shadow: 0 0 15px rgba(59,130,246,0.4); }
+    .stream-bar-box { background: #0b1120; border-radius: 6px; height: 10px; overflow: hidden; position: relative; }
+    .stream-bar { background: linear-gradient(90deg, #3b82f6, var(--accent)); height: 100%; width: 0%; transition: width 0.05s linear; }
+    .stream-info { font-size: 0.82rem; color: var(--text-sub); display: flex; justify-content: space-between; }
+
+    /* 操作按鈕組 */
+    .action-group { display: flex; flex-direction: column; gap: 10px; }
+    .btn-draw { background: linear-gradient(135deg, var(--accent), #7928ca); border: none; color: #fff; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 18px rgba(255,0,127,0.4); transition: transform 0.1s; }
+    .btn-draw:active { transform: scale(0.97); }
+    .btn-draw:disabled { background: #334155; box-shadow: none; cursor: not-allowed; opacity: 0.6; }
+
+    .btn-monte { background: linear-gradient(135deg, #10b981, #047857); border: none; color: #fff; padding: 12px; border-radius: 10px; font-weight: bold; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 18px rgba(16,185,129,0.3); transition: transform 0.1s; }
+    .btn-monte:active { transform: scale(0.97); }
+    .btn-monte:disabled { background: #334155; box-shadow: none; cursor: not-allowed; opacity: 0.6; }
+
+    /* 10校實時學額注水卡片陣列 */
+    .grid-schools { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .card-sch { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; position: relative; transition: 0.2s; }
+    .card-sch.full-house { border-color: var(--red); background: rgba(239,68,68,0.05); }
+    .card-sch.won-house { border-color: var(--green); background: rgba(16,185,129,0.08); box-shadow: 0 0 15px rgba(16,185,129,0.3); }
+    
+    .sch-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .sch-name { font-weight: bold; font-size: 0.95rem; }
+    .type-pill { font-size: 0.7rem; padding: 2px 7px; border-radius: 4px; font-weight: bold; }
+    .pill-girls { background: #be185d; }
+    .pill-boys { background: #1d4ed8; }
+    .pill-coed { background: #334155; }
+
+    .fill-track { background: #090e1a; height: 18px; border-radius: 9px; overflow: hidden; position: relative; border: 1px solid #1e293b; }
+    .fill-inner { background: linear-gradient(90deg, #10b981, #059669); height: 100%; width: 0%; transition: width 0.05s linear; }
+    .fill-inner.full { background: #ef4444; }
+    .fill-txt { position: absolute; inset: 0; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+
+    /* 結果彈窗橫幅 */
+    .banner-result { background: #142038; border: 2px solid var(--accent); border-radius: 12px; padding: 16px 20px; display: none; align-items: center; justify-content: space-between; box-shadow: 0 6px 25px rgba(0,0,0,0.5); animation: popScale 0.3s ease-out; }
+    .res-title { font-size: 1.3rem; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+    .res-desc { font-size: 0.92rem; color: var(--text-sub); margin-top: 5px; }
+    .res-stamp { font-size: 3.5rem; }
+
+    /* 蒙地卡羅千次結果視窗面板 */
+    .monte-modal { background: #142038; border: 2px solid var(--green); border-radius: 12px; padding: 18px 20px; display: none; flex-direction: column; gap: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.7); animation: popScale 0.3s ease-out; }
+    .monte-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .monte-title { font-size: 1.15rem; font-weight: bold; color: var(--green); }
+    .monte-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .monte-item { background: #0b1120; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .monte-bar-track { background: #1e293b; height: 8px; border-radius: 4px; overflow: hidden; }
+    .monte-bar-fill { background: linear-gradient(90deg, var(--green), #3b82f6); height: 100%; width: 0%; }
+    @keyframes popScale { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- 左側：籤號資訊與浮動拖曳志願 -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>👧 考生隨機抽籤結果</span>
+      <button class="btn-arrow" style="width: auto; padding: 2px 8px;" onclick="generateMyNewLottery()" title="重新搖取隨機籤號">🎲 換個籤號</button>
+    </div>
+
+    <!-- 考生號碼卡片 -->
+    <div class="ticket-card">
+      <div class="ticket-lbl">全港電腦隨機編號 (Random No.)</div>
+      <div class="ticket-num" id="myTicketNum">RN-?????</div>
+      <div class="ticket-sub">
+        <span>全港排名：<b id="myHkRank" style="color:var(--gold);">未攪珠</b></span>
+        <span>41網女童位次：<b id="myNetPos" style="color:#fff;">--</b> / 430</span>
+        <span class="ticket-badge" id="tierBadge">--</span>
+      </div>
+    </div>
+
+    <div class="tag-title">排序志願順位（最上方為【乙一】主力目標）：</div>
+    <div class="tag-list" id="tagList"></div>
+  </div>
+
+  <!-- 右側：攪珠機與實時學額注水儀表板 -->
+  <div class="main-view">
+    <!-- 攪珠控制大看板 -->
+    <div class="machine-deck">
+      <div class="tumbler-box">
+        <canvas id="tumblerCanvas" width="130" height="130"></canvas>
+      </div>
+
+      <div class="stream-status">
+        <div class="stream-headline">全港小一統一派位實時叫號中（總學童 38,500 人）：</div>
+        <div class="stream-current-no" id="streamCounter">RN-00000</div>
+        <div class="stream-bar-box">
+          <div class="stream-bar" id="streamBar"></div>
+        </div>
+        <div class="stream-info">
+          <span>41校網已叫號學童：<b id="netProcessed">0</b> / 820 人</span>
+          <span>在妳之前先行入座人數：<b id="aheadGirlsCount" style="color:var(--accent);">--</b> 人</span>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <button class="btn-draw" id="btnStart" onclick="startLotteryFlow()">🎰 單次實時攪珠！</button>
+        <button class="btn-monte" id="btnMonte" onclick="runMonteCarlo1000()">⚡ 極速跑 1,000 次！</button>
+      </div>
+    </div>
+
+    <!-- 10間學校實時Fill滿儀表板 -->
+    <div class="grid-schools" id="schoolsGrid"></div>
+
+    <!-- 單次抽中結果橫幅 -->
+    <div class="banner-result" id="resBanner">
+      <div>
+        <div class="res-title" id="resTitle"></div>
+        <div class="res-desc" id="resDesc"></div>
+      </div>
+      <div class="res-stamp" id="resStamp"></div>
+    </div>
+
+    <!-- 1,000 次蒙地卡羅驗算結果面板 -->
+    <div class="monte-modal" id="monteModal">
+      <div class="monte-header">
+        <span class="monte-title">📊 1,000 次蒙地卡羅大抽獎中籤率統計</span>
+        <span style="font-size: 0.85rem; color: var(--text-sub);">依據你設定之志願順位真實模擬</span>
+      </div>
+      <div class="monte-grid" id="monteGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 1. 41校網 10 間學校最新官方核算學額資料庫
+  const SCHOOLS = [
+    { id: 'maryknoll', name: '瑪利諾修院學校（小學部）', type: 'girls', total: 150, bQuota: 60, allocated: 0 },
+    { id: 'hf_kt', name: '嘉諾撒聖家學校（九龍塘）', type: 'girls', total: 120, bQuota: 50, allocated: 0 },
+    { id: 'hf_cr', name: '嘉諾撒聖家學校（聯合道）', type: 'girls', total: 90, bQuota: 38, allocated: 0 },
+    { id: 'ccc', name: 'CCC 基華小學（九龍塘）', type: 'coed', total: 120, bQuota: 50, allocated: 0 },
+    { id: 'ktg', name: '九龍塘官立小學', type: 'coed', total: 100, bQuota: 52, allocated: 0 },
+    { id: 'ktw', name: '九龍塘天主教華德學校', type: 'coed', total: 100, bQuota: 45, allocated: 0 },
+    { id: 'wd', name: '華德學校', type: 'coed', total: 100, bQuota: 42, allocated: 0 },
+    { id: 'dps', name: '拔萃小學', type: 'coed', total: 60, bQuota: 27, allocated: 0 },
+    { id: 'ys', name: '耀山學校', type: 'coed', total: 25, bQuota: 11, allocated: 0 },
+    { id: 'lasalle', name: '喇沙小學', type: 'boys', total: 180, bQuota: 80, allocated: 0 }
+  ];
+
+  let myChoices = ['maryknoll', 'hf_kt', 'ccc', 'ktg', 'hf_cr', 'ktw', 'wd', 'dps', 'ys'];
+
+  const TOTAL_HK = 38500;
+  const TOTAL_NET_ALL = 820;
+  const TOTAL_NET_GIRLS = 430;
+
+  let myHkRN = 17499;
+  let myNetPos = 195;
+  let isRunning = false;
+
+  // 2. 隨機籤號生成
+  function generateMyNewLottery() {
+    if (isRunning) return;
+    myHkRN = Math.floor(Math.random() * (TOTAL_HK - 500)) + 300;
+    myNetPos = Math.max(1, Math.round((myHkRN / TOTAL_HK) * TOTAL_NET_GIRLS));
+
+    document.getElementById('myTicketNum').innerText = `RN-${myHkRN.toString().padStart(5, '0')}`;
+    document.getElementById('myHkRank').innerText = `第 ${myHkRN.toLocaleString()} 名`;
+    document.getElementById('myNetPos').innerText = myNetPos;
+    document.getElementById('aheadGirlsCount').innerText = `${myNetPos - 1}`;
+
+    const badge = document.getElementById('tierBadge');
+    if (myNetPos <= 80) {
+      badge.className = 'ticket-badge badge-good';
+      badge.innerText = '前鋒神籤';
+    } else if (myNetPos <= 260) {
+      badge.className = 'ticket-badge badge-mid';
+      badge.innerText = '常態中游籤';
+    } else {
+      badge.className = 'ticket-badge badge-back';
+      badge.innerText = '偏後防守籤';
+    }
+    document.getElementById('resBanner').style.display = 'none';
+    document.getElementById('monteModal').style.display = 'none';
+  }
+
+  // 3. 渲染志願標籤
+  function renderTags() {
+    const list = document.getElementById('tagList');
+    list.innerHTML = '';
+    myChoices.forEach((id, idx) => {
+      const sch = SCHOOLS.find(s => s.id === id);
+      const tag = document.createElement('div');
+      tag.className = `sch-tag ${idx === 0 ? 'top-tag' : ''}`;
+      tag.innerHTML = `
+        <span class="sch-tag-rank">${idx === 0 ? '👑 乙一' : '乙' + (idx+1)}</span>
+        <span class="sch-tag-name">${sch.name}</span>
+        <div class="sch-tag-btns">
+          <button class="btn-arrow" onclick="swapChoice(${idx}, -1)">▲</button>
+          <button class="btn-arrow" onclick="swapChoice(${idx}, 1)">▼</button>
+        </div>
+      `;
+      list.appendChild(tag);
+    });
+  }
+
+  function swapChoice(idx, delta) {
+    if (isRunning) return;
+    const tgt = idx + delta;
+    if (tgt < 0 || tgt >= myChoices.length) return;
+    const temp = myChoices[idx];
+    myChoices[idx] = myChoices[tgt];
+    myChoices[tgt] = temp;
+    renderTags();
+  }
+
+  // 4. 渲染 10 所學校注水卡片
+  function renderSchoolsGrid() {
+    const grid = document.getElementById('schoolsGrid');
+    grid.innerHTML = '';
+    SCHOOLS.forEach(s => {
+      const card = document.createElement('div');
+      card.className = `card-sch ${s.allocated >= s.bQuota ? 'full-house' : ''}`;
+      card.id = `schCard-${s.id}`;
+
+      let pillClass = s.type === 'girls' ? 'pill-girls' : (s.type === 'boys' ? 'pill-boys' : 'pill-coed');
+      let pillText = s.type === 'girls' ? '女校' : (s.type === 'boys' ? '男校' : '男女校');
+      let pct = Math.min(100, Math.round((s.allocated / s.bQuota) * 100));
+
+      card.innerHTML = `
+        <div class="sch-row-top">
+          <span class="sch-name">${s.name}</span>
+          <span class="type-pill ${pillClass}">${pillText}</span>
+        </div>
+        <div class="fill-track">
+          <div class="fill-inner ${pct >= 100 ? 'full' : ''}" id="bar-${s.id}" style="width: ${pct}%"></div>
+          <div class="fill-txt" id="txt-${s.id}">${s.allocated} / ${s.bQuota} 席 (${pct}%)</div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  // 5. 攪珠機畫布物理模擬動態
+  const canvas = document.getElementById('tumblerCanvas');
+  const ctx = canvas.getContext('2d');
+  let balls = [];
+  for (let i = 0; i < 24; i++) {
+    balls.push({
+      x: 65 + (Math.random() - 0.5) * 40,
+      y: 65 + (Math.random() - 0.5) * 40,
+      vx: (Math.random() - 0.5) * 5,
+      vy: (Math.random() - 0.5) * 5,
+      r: 6,
+      color: ['#ff007f', '#f59e0b', '#3b82f6', '#10b981', '#a855f7'][i % 5]
+    });
+  }
+
+  function drawTumbler(isSpinning) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    balls.forEach(b => {
+      if (isSpinning) {
+        b.vx += (Math.random() - 0.5) * 4;
+        b.vy += (Math.random() - 0.5) * 4;
+      }
+      b.x += b.vx;
+      b.y += b.vy;
+      let dist = Math.hypot(b.x - 65, b.y - 65);
+      if (dist > 52) {
+        let angle = Math.atan2(b.y - 65, b.x - 65);
+        b.x = 65 + Math.cos(angle) * 52;
+        b.y = 65 + Math.sin(angle) * 52;
+        b.vx = -b.vx * 0.8;
+        b.vy = -b.vy * 0.8;
+      }
+      b.vx *= 0.98;
+      b.vy *= 0.98;
+
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = b.color;
+      ctx.fill();
+    });
+  }
+  setInterval(() => drawTumbler(isRunning), 25);
+
+  // 6. 單次實時注水抽籤
+  function startLotteryFlow() {
+    if (isRunning) return;
+    isRunning = true;
+    document.getElementById('btnStart').disabled = true;
+    document.getElementById('btnMonte').disabled = true;
+    document.getElementById('resBanner').style.display = 'none';
+    document.getElementById('monteModal').style.display = 'none';
+
+    SCHOOLS.forEach(s => s.allocated = 0);
+    renderSchoolsGrid();
+
+    let curTicker = 0;
+    let netProcessedCount = 0;
+    const step = Math.max(120, Math.round(myHkRN / 55));
+
+    const timer = setInterval(() => {
+      curTicker += step;
+      if (curTicker >= myHkRN) curTicker = myHkRN;
+
+      document.getElementById('streamCounter').innerText = `RN-${curTicker.toString().padStart(5, '0')}`;
+      let progressPct = (curTicker / TOTAL_HK) * 100;
+      document.getElementById('streamBar').style.width = `${progressPct}%`;
+
+      let currentNetTarget = Math.round((curTicker / TOTAL_HK) * TOTAL_NET_ALL);
+      let batchAlloc = currentNetTarget - netProcessedCount;
+      netProcessedCount = currentNetTarget;
+      document.getElementById('netProcessed').innerText = netProcessedCount;
+
+      if (batchAlloc > 0) {
+        for (let i = 0; i < batchAlloc; i++) {
+          let isBoy = Math.random() < 0.49;
+          if (isBoy) {
+            let bTgt = (Math.random() < 0.6) ? SCHOOLS.find(s => s.id === 'lasalle') : SCHOOLS.find(s => s.type === 'coed' && s.allocated < s.bQuota);
+            if (bTgt && bTgt.allocated < bTgt.bQuota) bTgt.allocated++;
+          } else {
+            let randG = Math.random();
+            let gTgt;
+            if (randG < 0.45) gTgt = SCHOOLS.find(s => s.id === 'maryknoll');
+            else if (randG < 0.70) gTgt = SCHOOLS.find(s => s.id === 'hf_kt');
+            else if (randG < 0.85) gTgt = SCHOOLS.find(s => s.id === 'hf_cr');
+            else gTgt = SCHOOLS.find(s => s.type === 'coed' && s.allocated < s.bQuota);
+
+            if (gTgt && gTgt.allocated < gTgt.bQuota) gTgt.allocated++;
+          }
+        }
+
+        SCHOOLS.forEach(s => {
+          let pct = Math.min(100, Math.round((s.allocated / s.bQuota) * 100));
+          const bar = document.getElementById(`bar-${s.id}`);
+          const txt = document.getElementById(`txt-${s.id}`);
+          const card = document.getElementById(`schCard-${s.id}`);
+          if (bar) {
+            bar.style.width = `${pct}%`;
+            if (pct >= 100) {
+              bar.classList.add('full');
+              card.classList.add('full-house');
+            }
+          }
+          if (txt) txt.innerText = `${s.allocated} / ${s.bQuota} 席 (${pct}%)`;
+        });
+      }
+
+      if (curTicker >= myHkRN) {
+        clearInterval(timer);
+        isRunning = false;
+        document.getElementById('btnStart').disabled = false;
+        document.getElementById('btnMonte').disabled = false;
+        resolveCandidatePlacement();
+      }
+    }, 45);
+  }
+
+  function resolveCandidatePlacement() {
+    const banner = document.getElementById('resBanner');
+    const title = document.getElementById('resTitle');
+    const desc = document.getElementById('resDesc');
+    const stamp = document.getElementById('resStamp');
+    banner.style.display = 'flex';
+
+    for (let i = 0; i < myChoices.length; i++) {
+      const schId = myChoices[i];
+      const sch = SCHOOLS.find(s => s.id === schId);
+
+      if (sch.allocated < sch.bQuota) {
+        sch.allocated++;
+        let mySeatIndex = sch.allocated;
+
+        title.innerHTML = `<span style="color:var(--green)">✓ 恭喜！於【乙${i+1}】獲派 ${sch.name}</span>`;
+        desc.innerText = `在叫號到達 RN-${myHkRN}（41網第 ${myNetPos} 位女童）時，該校前面已被佔用 ${mySeatIndex - 1} 席，妳是第 ${mySeatIndex} 位成功入座！`;
+        stamp.innerText = '🎉';
+        banner.style.borderColor = 'var(--green)';
+
+        const hitCard = document.getElementById(`schCard-${sch.id}`);
+        if (hitCard) hitCard.classList.add('won-house');
+
+        renderSchoolsGrid();
+        return;
+      }
+    }
+
+    title.innerHTML = `<span style="color:var(--red)">✗ 遺憾！妳所填寫的 9 個志願在輪到妳之前均已全數額滿</span>`;
+    desc.innerText = `排在妳前面的 ${myNetPos - 1} 名女童已將志願學額搶空，電腦將隨機將妳分派往 41 校網剩餘細校或外網（黃大仙區）借調學額。`;
+    stamp.innerText = '❌';
+    banner.style.borderColor = 'var(--red)';
+  }
+
+  // 7. 核心新增：1,000 次極速蒙地卡羅驗算器
+  function runMonteCarlo1000() {
+    if (isRunning) return;
+    document.getElementById('resBanner').style.display = 'none';
+    const modal = document.getElementById('monteModal');
+    const grid = document.getElementById('monteGrid');
+    modal.style.display = 'flex';
+    grid.innerHTML = '<div style="color:var(--gold); grid-column:span 2; padding:10px;">⚡ 正在全速進行 1,000 次完整大抽獎蒙地卡羅模擬...</div>';
+
+    setTimeout(() => {
+      // 統計次數分佈
+      let tally = {};
+      myChoices.forEach((id, idx) => {
+        tally[id] = { count: 0, rankLabel: `乙${idx+1}` };
+      });
+      let unassignedCount = 0;
+      const SIM_ROUNDS = 1000;
+
+      for (let r = 0; r < SIM_ROUNDS; r++) {
+        // 隨機抽籤號
+        let simRN = Math.floor(Math.random() * (TOTAL_HK - 500)) + 300;
+        let simAheadNet = Math.round((simRN / TOTAL_HK) * TOTAL_NET_ALL);
+
+        // 建立該輪的學額配額
+        let simAlloc = {};
+        SCHOOLS.forEach(s => simAlloc[s.id] = 0);
+
+        // 模擬排在妳前面的學童選擇
+        for (let i = 0; i < simAheadNet; i++) {
+          let isBoy = Math.random() < 0.49;
+          if (isBoy) {
+            let bTgt = (Math.random() < 0.6) ? 'lasalle' : SCHOOLS.find(s => s.type === 'coed' && simAlloc[s.id] < s.bQuota)?.id;
+            if (bTgt && simAlloc[bTgt] < (SCHOOLS.find(s=>s.id===bTgt)?.bQuota || 0)) simAlloc[bTgt]++;
+          } else {
+            let randG = Math.random();
+            let gTgt;
+            if (randG < 0.45) gTgt = 'maryknoll';
+            else if (randG < 0.70) gTgt = 'hf_kt';
+            else if (randG < 0.85) gTgt = 'hf_cr';
+            else gTgt = SCHOOLS.find(s => s.type === 'coed' && simAlloc[s.id] < s.bQuota)?.id;
+
+            if (gTgt && simAlloc[gTgt] < (SCHOOLS.find(s=>s.id===gTgt)?.bQuota || 0)) simAlloc[gTgt]++;
+          }
+        }
+
+        // 輪到考生本人依順序落座
+        let gotSeat = false;
+        for (let idx = 0; idx < myChoices.length; idx++) {
+          let schId = myChoices[idx];
+          let schObj = SCHOOLS.find(s => s.id === schId);
+          if (simAlloc[schId] < schObj.bQuota) {
+            tally[schId].count++;
+            gotSeat = true;
+            break;
+          }
+        }
+        if (!gotSeat) unassignedCount++;
+      }
+
+      // 渲染統計結果
+      grid.innerHTML = '';
+      myChoices.forEach(schId => {
+        let sch = SCHOOLS.find(s => s.id === schId);
+        let data = tally[schId];
+        let pct = ((data.count / SIM_ROUNDS) * 100).toFixed(1);
+
+        const item = document.createElement('div');
+        item.className = 'monte-item';
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+            <span><b style="color:var(--gold);">${data.rankLabel}</b> ${sch.name}</span>
+            <span style="font-weight:bold; color:var(--text);">${data.count} 次 (${pct}%)</span>
+          </div>
+          <div class="monte-bar-track">
+            <div class="monte-bar-fill" style="width: ${pct}%;"></div>
+          </div>
+        `;
+        grid.appendChild(item);
+      });
+
+      // 顯示掉出志願線的借調比率
+      let failPct = ((unassignedCount / SIM_ROUNDS) * 100).toFixed(1);
+      const failItem = document.createElement('div');
+      failItem.className = 'monte-item';
+      failItem.style.borderColor = failPct > 5 ? 'var(--red)' : 'var(--border)';
+      failItem.innerHTML = `
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+          <span style="color:var(--red);">⚠️ 志願落空（派外網/借調位）</span>
+          <span style="font-weight:bold; color:var(--red);">${unassignedCount} 次 (${failPct}%)</span>
+        </div>
+        <div class="monte-bar-track">
+          <div class="monte-bar-fill" style="width: ${failPct}%; background: var(--red);"></div>
+        </div>
+      `;
+      grid.appendChild(failItem);
+    }, 200);
+  }
+
+  // 初始化
+  generateMyNewLottery();
+  renderTags();
+  renderSchoolsGrid();
+</script>
+
+</body>
+</html>
