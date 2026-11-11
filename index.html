@@ -2,7 +2,7 @@
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
-  <title>41校網小一統一派位真實數據模擬器 (2025/26年精準版)</title>
+  <title>41校網小一統一派位真實數據模擬器 (甲部/乙部雙軌拆分版)</title>
   <style>
     :root {
       --bg: #090d16;
@@ -36,10 +36,16 @@
     .badge-mid { background: rgba(245,158,11,0.2); color: var(--gold); }
     .badge-back { background: rgba(239,68,68,0.2); color: var(--red); }
 
+    /* 甲部與乙部區塊設定 */
+    .section-title { font-size: 0.85rem; font-weight: bold; color: var(--blue); margin-top: 5px; display: flex; align-items: center; justify-content: space-between; }
+    .part-a-box { background: #0b1120; border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .part-a-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; }
+    .part-a-select { background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 4px; padding: 3px 6px; font-size: 0.8rem; width: 220px; }
+
     /* 拖曳志願列表 */
-    .tag-title { font-size: 0.85rem; color: var(--text-sub); }
-    .tag-list { display: flex; flex-direction: column; gap: 6px; max-height: 480px; overflow-y: auto; padding-right: 2px; }
-    .sch-tag { background: #0b1120; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; user-select: none; transition: 0.2s; cursor: grab; }
+    .tag-title { font-size: 0.85rem; font-weight: bold; color: var(--gold); }
+    .tag-list { display: flex; flex-direction: column; gap: 6px; max-height: 380px; overflow-y: auto; padding-right: 2px; }
+    .sch-tag { background: #0b1120; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; user-select: none; transition: 0.2s; }
     .sch-tag.top-tag { border-color: var(--gold); background: rgba(245,158,11,0.12); }
     .sch-tag-rank { width: 50px; font-weight: bold; font-size: 0.85rem; color: var(--gold); }
     .sch-tag-name { flex-grow: 1; font-size: 0.83rem; }
@@ -85,7 +91,7 @@
     .fill-inner.full { background: #ef4444; }
     .fill-txt { position: absolute; inset: 0; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold; text-shadow: 1px 1px 2px #000; }
 
-    /* 41區母體與派位統計儀表板 (新增) */
+    /* 41區母體與派位統計儀表板 */
     .stat-dashboard { background: #142038; border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     .stat-box { background: #0b1120; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
     .stat-lbl { font-size: 0.75rem; color: var(--text-sub); }
@@ -112,20 +118,40 @@
   <div class="panel">
     <div class="panel-header">
       <span>👧 考生隨機抽籤卡</span>
-      <button class="btn-arrow" style="width: auto; padding: 2px 8px;" onclick="generateMyNewLottery()">🎲 換籤號</button>
+      <button class="btn-arrow" style="width: auto; padding: 2px 8px;" onclick="generateRandomNumberUI()">🎲 換籤號</button>
     </div>
 
     <div class="ticket-card">
       <div class="ticket-lbl">全港隨機編號 (Random No.)</div>
       <div class="ticket-num" id="myTicketNum">RN-?????</div>
       <div class="ticket-sub">
-        <span>全港排名：<b id="myHkRank" style="color:var(--gold);">未攪珠</b></span>
+        <span>全港排名：<b id="myHkRank" style="color:var(--gold);">點擊抽籤隨機派號</b></span>
         <span>41網女童排位：<b id="myNetPos" style="color:#fff;">--</b> / 270</span>
         <span class="ticket-badge" id="tierBadge">--</span>
       </div>
     </div>
 
-    <div class="tag-title">排序志願順位（最頂為【乙一】主力目標）：</div>
+    <!-- 甲部（不受校網限制，最多選 3 間） -->
+    <div class="section-title">
+      <span>🌐 甲部：不受校網限制（全港搶 10% 額）</span>
+    </div>
+    <div class="part-a-box">
+      <div class="part-a-item">
+        <span>甲一：</span>
+        <select class="part-a-select" id="partA1"></select>
+      </div>
+      <div class="part-a-item">
+        <span>甲二：</span>
+        <select class="part-a-select" id="partA2"></select>
+      </div>
+      <div class="part-a-item">
+        <span>甲三：</span>
+        <select class="part-a-select" id="partA3"></select>
+      </div>
+    </div>
+
+    <!-- 乙部（41校網本網瀑布流） -->
+    <div class="tag-title">🏫 乙部：41校網志願順位（依序順延）：</div>
     <div class="tag-list" id="tagList"></div>
   </div>
 
@@ -138,7 +164,7 @@
         <div class="stat-val">687 人</div>
       </div>
       <div class="stat-box">
-        <div class="stat-lbl">自行已取錄 (世襲+計分)</div>
+        <div class="stat-lbl">自行分配已取錄</div>
         <div class="stat-val" style="color:var(--green)">142 人 (20.7%)</div>
       </div>
       <div class="stat-box">
@@ -158,19 +184,19 @@
       </div>
 
       <div class="stream-status">
-        <div class="stream-headline">全港小一統一派位叫號中（全港學童 38,500 人）：</div>
+        <div class="stream-headline">全港小一統一派位實時叫號（全港學童 38,500 人）：</div>
         <div class="stream-current-no" id="streamCounter">RN-00000</div>
         <div class="stream-bar-box">
           <div class="stream-bar" id="streamBar"></div>
         </div>
         <div class="stream-info">
-          <span>41校網已抽籤學童：<b id="netProcessed">0</b> / 545 人</span>
-          <span>領先妳的女童人數：<b id="aheadGirlsCount" style="color:var(--accent);">--</b> 人</span>
+          <span>41校網已處理：<b id="netProcessed">0</b> / 545 人</span>
+          <span>在妳之前女童數：<b id="aheadGirlsCount" style="color:var(--accent);">--</b> 人</span>
         </div>
       </div>
 
       <div class="action-group">
-        <button class="btn-draw" id="btnStart" onclick="startLotteryFlow()">🎰 單次實時攪珠！</button>
+        <button class="btn-draw" id="btnStart" onclick="startSingleDraw()">🎰 單次實時攪珠！</button>
         <button class="btn-monte" id="btnMonte" onclick="runMonteCarlo1000()">⚡ 極速跑 1,000 次！</button>
       </div>
     </div>
@@ -190,8 +216,8 @@
     <!-- 1,000次驗算面板 -->
     <div class="monte-modal" id="monteModal">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:bold; color:var(--green)">📊 1,000 次大抽獎真實意向模擬統計結果</span>
-        <span style="font-size:0.8rem; color:var(--text-sub)">結合家長真實填選偏好矩陣</span>
+        <span style="font-weight:bold; color:var(--green)">📊 1,000 次獨立籤號大抽獎統計結果</span>
+        <span style="font-size:0.8rem; color:var(--text-sub)">含甲部 (1-3) 及乙部 (乙一/乙二/乙三...) 真實偏好模擬</span>
       </div>
       <div class="monte-grid" id="monteGrid"></div>
     </div>
@@ -199,40 +225,39 @@
 </div>
 
 <script>
-  // 1. 依據2026自行分配超收實據核算之乙部實質學額
+  // 1. 各校學額資料庫：拆分甲部(10%)與乙部(90%)
   const SCHOOLS = [
-    { id: 'maryknoll', name: '瑪利諾修院學校（小學部）', type: 'girls', total: 150, bQuota: 60, allocated: 0 },
-    { id: 'hf_kt', name: '嘉諾撒聖家學校（九龍塘）', type: 'girls', total: 120, bQuota: 50, allocated: 0 },
-    { id: 'hf_cr', name: '嘉諾撒聖家學校（聯合道）', type: 'girls', total: 90, bQuota: 38, allocated: 0 },
-    { id: 'ccc', name: 'CCC 基華小學（九龍塘）', type: 'coed', total: 120, bQuota: 50, allocated: 0 },
-    { id: 'ktg', name: '九龍塘官立小學', type: 'coed', total: 100, bQuota: 52, allocated: 0 },
-    { id: 'ktw', name: '九龍塘天主教華德學校', type: 'coed', total: 100, bQuota: 45, allocated: 0 },
-    { id: 'wd', name: '華德學校', type: 'coed', total: 100, bQuota: 42, allocated: 0 },
-    { id: 'dps', name: '拔萃小學', type: 'coed', total: 60, bQuota: 27, allocated: 0 },
-    { id: 'ys', name: '耀山學校', type: 'coed', total: 25, bQuota: 11, allocated: 0 },
-    { id: 'lasalle', name: '喇沙小學', type: 'boys', total: 180, bQuota: 76, allocated: 0 }
+    { id: 'maryknoll', name: '瑪利諾修院學校（小學部）', type: 'girls', aQuota: 7, bQuota: 60, aAlloc: 0, bAlloc: 0 },
+    { id: 'hf_kt', name: '嘉諾撒聖家學校（九龍塘）', type: 'girls', aQuota: 6, bQuota: 50, aAlloc: 0, bAlloc: 0 },
+    { id: 'hf_cr', name: '嘉諾撒聖家學校（聯合道）', type: 'girls', aQuota: 4, bQuota: 38, aAlloc: 0, bAlloc: 0 },
+    { id: 'ccc', name: 'CCC 基華小學（九龍塘）', type: 'coed', aQuota: 6, bQuota: 50, aAlloc: 0, bAlloc: 0 },
+    { id: 'ktg', name: '九龍塘官立小學', type: 'coed', aQuota: 6, bQuota: 52, aAlloc: 0, bAlloc: 0 },
+    { id: 'ktw', name: '九龍塘天主教華德學校', type: 'coed', aQuota: 5, bQuota: 45, aAlloc: 0, bAlloc: 0 },
+    { id: 'wd', name: '華德學校', type: 'coed', aQuota: 5, bQuota: 42, aAlloc: 0, bAlloc: 0 },
+    { id: 'dps', name: '拔萃小學', type: 'coed', aQuota: 3, bQuota: 27, aAlloc: 0, bAlloc: 0 },
+    { id: 'ys', name: '耀山學校', type: 'coed', aQuota: 1, bQuota: 11, aAlloc: 0, bAlloc: 0 },
+    { id: 'lasalle', name: '喇沙小學', type: 'boys', aQuota: 8, bQuota: 76, aAlloc: 0, bAlloc: 0 }
   ];
 
-  let myChoices = ['maryknoll', 'hf_kt', 'ccc', 'ktg', 'hf_cr', 'ktw', 'wd', 'dps', 'ys'];
+  // 預設志願：乙部 9 間
+  let myChoicesB = ['maryknoll', 'hf_kt', 'hf_cr', 'ccc', 'ktg', 'ktw', 'wd', 'dps', 'ys'];
 
-  // 2. 2025報告書官方母體數據
   const TOTAL_HK = 38500;
-  const NET41_TOTAL_STUDENTS = 687;
-  const NET41_DISCRETIONARY_WON = 142; // 世襲71 + 計分71
-  const NET41_CENTRAL_APPLICANTS = 545; // 進入大抽獎
+  const NET41_CENTRAL_APPLICANTS = 545;
   const NET41_CENTRAL_GIRLS = 270;
   const NET41_CENTRAL_BOYS = 275;
 
-  let myHkRN = 17499;
-  let myNetPos = 122; // 270名女童中
+  let myHkRN = 0;
+  let myNetPos = 0;
   let isRunning = false;
 
-  function generateMyNewLottery() {
-    if (isRunning) return;
+  // 隨機搖號函數
+  function rollNewLottery() {
     myHkRN = Math.floor(Math.random() * (TOTAL_HK - 500)) + 300;
-    // 依比例映射至41網270名女童
     myNetPos = Math.max(1, Math.round((myHkRN / TOTAL_HK) * NET41_CENTRAL_GIRLS));
+  }
 
+  function updateTicketUI() {
     document.getElementById('myTicketNum').innerText = `RN-${myHkRN.toString().padStart(5, '0')}`;
     document.getElementById('myHkRank').innerText = `第 ${myHkRN.toLocaleString()} 名`;
     document.getElementById('myNetPos').innerText = myNetPos;
@@ -249,14 +274,39 @@
       badge.className = 'ticket-badge badge-back';
       badge.innerText = '偏後防守籤';
     }
+  }
+
+  function generateRandomNumberUI() {
+    if (isRunning) return;
+    rollNewLottery();
+    updateTicketUI();
     document.getElementById('resBanner').style.display = 'none';
     document.getElementById('monteModal').style.display = 'none';
   }
 
+  // 初始化甲部下拉選單
+  function initPartA() {
+    const selects = [document.getElementById('partA1'), document.getElementById('partA2'), document.getElementById('partA3')];
+    selects.forEach((sel, idx) => {
+      sel.innerHTML = '<option value="">-- 留空 --</option>';
+      SCHOOLS.filter(s => s.type !== 'boys').forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.innerText = s.name;
+        sel.appendChild(opt);
+      });
+    });
+    // 預設甲一填瑪利諾、甲二填聖家九龍塘
+    selects[0].value = 'maryknoll';
+    selects[1].value = 'hf_kt';
+    selects[2].value = '';
+  }
+
+  // 渲染乙部標籤
   function renderTags() {
     const list = document.getElementById('tagList');
     list.innerHTML = '';
-    myChoices.forEach((id, idx) => {
+    myChoicesB.forEach((id, idx) => {
       const sch = SCHOOLS.find(s => s.id === id);
       const tag = document.createElement('div');
       tag.className = `sch-tag ${idx === 0 ? 'top-tag' : ''}`;
@@ -275,24 +325,27 @@
   function swapChoice(idx, delta) {
     if (isRunning) return;
     const tgt = idx + delta;
-    if (tgt < 0 || tgt >= myChoices.length) return;
-    const temp = myChoices[idx];
-    myChoices[idx] = myChoices[tgt];
-    myChoices[tgt] = temp;
+    if (tgt < 0 || tgt >= myChoicesB.length) return;
+    const temp = myChoicesB[idx];
+    myChoicesB[idx] = myChoicesB[tgt];
+    myChoicesB[tgt] = temp;
     renderTags();
   }
 
+  // 渲染 10 所學校進度卡
   function renderSchoolsGrid() {
     const grid = document.getElementById('schoolsGrid');
     grid.innerHTML = '';
     SCHOOLS.forEach(s => {
       const card = document.createElement('div');
-      card.className = `card-sch ${s.allocated >= s.bQuota ? 'full-house' : ''}`;
+      let totalAlloc = s.aAlloc + s.bAlloc;
+      let totalQuota = s.aQuota + s.bQuota;
+      card.className = `card-sch ${totalAlloc >= totalQuota ? 'full-house' : ''}`;
       card.id = `schCard-${s.id}`;
 
       let pillClass = s.type === 'girls' ? 'pill-girls' : (s.type === 'boys' ? 'pill-boys' : 'pill-coed');
       let pillText = s.type === 'girls' ? '女校' : (s.type === 'boys' ? '男校' : '男女校');
-      let pct = Math.min(100, Math.round((s.allocated / s.bQuota) * 100));
+      let pct = Math.min(100, Math.round((totalAlloc / totalQuota) * 100));
 
       card.innerHTML = `
         <div class="sch-row-top">
@@ -301,14 +354,14 @@
         </div>
         <div class="fill-track">
           <div class="fill-inner ${pct >= 100 ? 'full' : ''}" id="bar-${s.id}" style="width: ${pct}%"></div>
-          <div class="fill-txt" id="txt-${s.id}">${s.allocated} / ${s.bQuota} 席 (${pct}%)</div>
+          <div class="fill-txt" id="txt-${s.id}">甲:${s.aAlloc}/${s.aQuota} | 乙:${s.bAlloc}/${s.bQuota} 席 (${pct}%)</div>
         </div>
       `;
       grid.appendChild(card);
     });
   }
 
-  // 攪珠機畫布
+  // 攪珠機畫布動畫
   const canvas = document.getElementById('tumblerCanvas');
   const ctx = canvas.getContext('2d');
   let balls = [];
@@ -351,41 +404,43 @@
   }
   setInterval(() => drawTumbler(isRunning), 25);
 
-  // 家長真實填選偏好取向函數 (非隨機)
+  // 家長真實填選偏好取向函數 (甲部與乙部分流)
   function getOtherGirlPreference() {
     let r = Math.random();
-    // 乙一：瑪校 48%、聖家九龍塘 28%、拔萃 10%、基華 8%、聖家聯合道 6%
-    if (r < 0.48) return ['maryknoll', 'hf_kt', 'hf_cr', 'ccc', 'ktg', 'ktw', 'wd', 'dps', 'ys'];
-    if (r < 0.76) return ['hf_kt', 'hf_cr', 'ccc', 'ktg', 'maryknoll', 'ktw', 'wd', 'dps', 'ys'];
-    if (r < 0.86) return ['dps', 'ccc', 'ktg', 'maryknoll', 'hf_kt', 'hf_cr', 'ktw', 'wd', 'ys'];
-    if (r < 0.94) return ['ccc', 'ktg', 'hf_kt', 'hf_cr', 'ktw', 'wd', 'dps', 'maryknoll', 'ys'];
-    return ['hf_cr', 'hf_kt', 'ccc', 'ktg', 'ktw', 'wd', 'maryknoll', 'dps', 'ys'];
+    // 乙一：瑪利諾 48%、聖家九龍塘 28%、拔萃 10%、基華 8%、聖家聯合道 6%
+    if (r < 0.48) return { partA: ['maryknoll', 'hf_kt'], partB: ['maryknoll', 'hf_kt', 'hf_cr', 'ccc', 'ktg', 'ktw', 'wd', 'dps', 'ys'] };
+    if (r < 0.76) return { partA: ['hf_kt', 'maryknoll'], partB: ['hf_kt', 'hf_cr', 'ccc', 'ktg', 'maryknoll', 'ktw', 'wd', 'dps', 'ys'] };
+    if (r < 0.86) return { partA: ['dps', 'maryknoll'], partB: ['dps', 'ccc', 'ktg', 'maryknoll', 'hf_kt', 'hf_cr', 'ktw', 'wd', 'ys'] };
+    if (r < 0.94) return { partA: ['ccc', 'hf_kt'], partB: ['ccc', 'ktg', 'hf_kt', 'hf_cr', 'ktw', 'wd', 'dps', 'maryknoll', 'ys'] };
+    return { partA: ['hf_cr', 'hf_kt'], partB: ['hf_cr', 'hf_kt', 'ccc', 'ktg', 'ktw', 'wd', 'maryknoll', 'dps', 'ys'] };
   }
 
   function getOtherBoyPreference() {
     let r = Math.random();
-    // 男童：喇沙 68%、拔萃 14%、基華 10%、其他男女校 8%
-    if (r < 0.68) return ['lasalle', 'dps', 'ccc', 'ktg', 'ktw', 'wd', 'ys'];
-    if (r < 0.82) return ['dps', 'lasalle', 'ccc', 'ktg', 'ktw', 'wd', 'ys'];
-    if (r < 0.92) return ['ccc', 'ktg', 'lasalle', 'dps', 'ktw', 'wd', 'ys'];
-    return ['ktg', 'ccc', 'ktw', 'wd', 'dps', 'lasalle', 'ys'];
+    if (r < 0.68) return { partA: ['lasalle', 'dps'], partB: ['lasalle', 'dps', 'ccc', 'ktg', 'ktw', 'wd', 'ys'] };
+    if (r < 0.82) return { partA: ['dps', 'lasalle'], partB: ['dps', 'lasalle', 'ccc', 'ktg', 'ktw', 'wd', 'ys'] };
+    return { partA: ['ccc', 'lasalle'], partB: ['ccc', 'ktg', 'lasalle', 'dps', 'ktw', 'wd', 'ys'] };
   }
 
-  // 單次攪珠
-  function startLotteryFlow() {
+  // 單次抽獎：按一次抽一次新號碼並即時注水
+  function startSingleDraw() {
     if (isRunning) return;
+    rollNewLottery();
+    updateTicketUI();
+
     isRunning = true;
     document.getElementById('btnStart').disabled = true;
     document.getElementById('btnMonte').disabled = true;
     document.getElementById('resBanner').style.display = 'none';
     document.getElementById('monteModal').style.display = 'none';
 
-    SCHOOLS.forEach(s => s.allocated = 0);
+    // 重設學額
+    SCHOOLS.forEach(s => { s.aAlloc = 0; s.bAlloc = 0; });
     renderSchoolsGrid();
 
     let curTicker = 0;
     let netProcessedCount = 0;
-    const step = Math.max(140, Math.round(myHkRN / 50));
+    const step = Math.max(140, Math.round(myHkRN / 45));
 
     const timer = setInterval(() => {
       curTicker += step;
@@ -400,22 +455,39 @@
       netProcessedCount = currentNetTarget;
       document.getElementById('netProcessed').innerText = netProcessedCount;
 
+      // 前方學童實時分流（先甲部，後乙部）
       if (batchAlloc > 0) {
         for (let i = 0; i < batchAlloc; i++) {
           let isBoy = Math.random() < (NET41_CENTRAL_BOYS / NET41_CENTRAL_APPLICANTS);
           let prefs = isBoy ? getOtherBoyPreference() : getOtherGirlPreference();
 
-          for (let p of prefs) {
-            let sch = SCHOOLS.find(s => s.id === p);
-            if (sch && sch.allocated < sch.bQuota) {
-              sch.allocated++;
+          // 1. 甲部配對
+          let gotPartA = false;
+          for (let pA of prefs.partA) {
+            let sch = SCHOOLS.find(s => s.id === pA);
+            if (sch && sch.aAlloc < sch.aQuota) {
+              sch.aAlloc++;
+              gotPartA = true;
               break;
+            }
+          }
+          // 2. 若甲部未中，流入乙部
+          if (!gotPartA) {
+            for (let pB of prefs.partB) {
+              let sch = SCHOOLS.find(s => s.id === pB);
+              if (sch && sch.bAlloc < sch.bQuota) {
+                sch.bAlloc++;
+                break;
+              }
             }
           }
         }
 
+        // 刷新注水視覺
         SCHOOLS.forEach(s => {
-          let pct = Math.min(100, Math.round((s.allocated / s.bQuota) * 100));
+          let totalAlloc = s.aAlloc + s.bAlloc;
+          let totalQuota = s.aQuota + s.bQuota;
+          let pct = Math.min(100, Math.round((totalAlloc / totalQuota) * 100));
           const bar = document.getElementById(`bar-${s.id}`);
           const txt = document.getElementById(`txt-${s.id}`);
           const card = document.getElementById(`schCard-${s.id}`);
@@ -426,10 +498,11 @@
               card.classList.add('full-house');
             }
           }
-          if (txt) txt.innerText = `${s.allocated} / ${s.bQuota} 席 (${pct}%)`;
+          if (txt) txt.innerText = `甲:${s.aAlloc}/${s.aQuota} | 乙:${s.bAlloc}/${s.bQuota} 席 (${pct}%)`;
         });
       }
 
+      // 到達考生隨機號碼
       if (curTicker >= myHkRN) {
         clearInterval(timer);
         isRunning = false;
@@ -440,6 +513,7 @@
     }, 45);
   }
 
+  // 結算考生派位（先檢驗甲部，後檢驗乙部瀑布流）
   function resolveCandidatePlacement() {
     const banner = document.getElementById('resBanner');
     const title = document.getElementById('resTitle');
@@ -447,16 +521,34 @@
     const stamp = document.getElementById('resStamp');
     banner.style.display = 'flex';
 
-    for (let i = 0; i < myChoices.length; i++) {
-      const schId = myChoices[i];
+    // 1. 先檢驗甲部 1-3
+    const myPartA = [document.getElementById('partA1').value, document.getElementById('partA2').value, document.getElementById('partA3').value].filter(v => v);
+    for (let i = 0; i < myPartA.length; i++) {
+      const schId = myPartA[i];
       const sch = SCHOOLS.find(s => s.id === schId);
+      if (sch && sch.aAlloc < sch.aQuota) {
+        sch.aAlloc++;
+        title.innerHTML = `<span style="color:var(--green)">✓ 恭喜！於【甲${i+1}】全港抽籤獲派 ${sch.name}</span>`;
+        desc.innerText = `憑藉 RN-${myHkRN} 前鋒號碼，在甲部第 ${i+1} 志願已成功鎖定學位（無需進入乙部）！`;
+        stamp.innerText = '🎊';
+        banner.style.borderColor = 'var(--green)';
+        const hitCard = document.getElementById(`schCard-${sch.id}`);
+        if (hitCard) hitCard.classList.add('won-house');
+        renderSchoolsGrid();
+        return;
+      }
+    }
 
-      if (sch.allocated < sch.bQuota) {
-        sch.allocated++;
-        let mySeatIndex = sch.allocated;
+    // 2. 甲部落空，流入乙部瀑布流
+    for (let i = 0; i < myChoicesB.length; i++) {
+      const schId = myChoicesB[i];
+      const sch = SCHOOLS.find(s => s.id === schId);
+      if (sch && sch.bAlloc < sch.bQuota) {
+        sch.bAlloc++;
+        let mySeatIndex = sch.bAlloc;
 
         title.innerHTML = `<span style="color:var(--green)">✓ 恭喜！於【乙${i+1}】獲派 ${sch.name}</span>`;
-        desc.innerText = `在叫號到達 RN-${myHkRN}（41網第 ${myNetPos} 位女童）時，該校前面已被佔用 ${mySeatIndex - 1} 席，妳是第 ${mySeatIndex} 位順利入座！`;
+        desc.innerText = `甲部落空後流入乙部。輪到妳 41 網第 ${myNetPos} 位女童時，該校前面已被佔用 ${mySeatIndex - 1} 席，妳是第 ${mySeatIndex} 位順利入座！`;
         stamp.innerText = '🎉';
         banner.style.borderColor = 'var(--green)';
 
@@ -468,104 +560,129 @@
       }
     }
 
-    title.innerHTML = `<span style="color:var(--red)">✗ 遺憾！妳所填寫的 9 個志願在輪到妳之前均已額滿</span>`;
+    // 3. 填寫志願全滿
+    title.innerHTML = `<span style="color:var(--red)">✗ 遺憾！妳所填寫的甲部及乙部志願在輪到妳之前均已額滿</span>`;
     desc.innerText = `在妳之前的 ${myNetPos - 1} 名女童已將志願選完，電腦將隨機將妳分派往 41 校網本網剩餘學額或黃大仙區借調學位。`;
     stamp.innerText = '❌';
     banner.style.borderColor = 'var(--red)';
   }
 
-  // 1,000次極速蒙地卡羅驗算 (依據真實志願偏好模型)
+  // 1,000次極速蒙地卡羅驗算（每次使用全新隨機號碼）
   function runMonteCarlo1000() {
     if (isRunning) return;
     document.getElementById('resBanner').style.display = 'none';
     const modal = document.getElementById('monteModal');
     const grid = document.getElementById('monteGrid');
     modal.style.display = 'flex';
-    grid.innerHTML = '<div style="color:var(--gold); grid-column:span 2; padding:10px;">⚡ 正在運行 1,000 次真實意向統一派位模擬...</div>';
+    grid.innerHTML = '<div style="color:var(--gold); grid-column:span 2; padding:10px;">⚡ 正在運行 1,000 次獨立全新號碼大抽獎模擬...</div>';
 
     setTimeout(() => {
-      let tally = {};
-      myChoices.forEach((id, idx) => {
-        tally[id] = { count: 0, rankLabel: `乙${idx+1}` };
-      });
-      let unassignedCount = 0;
+      let tally = {
+        'partA': { count: 0, label: '甲部獲派 (甲一/甲二/甲三)' },
+        'b_1': { count: 0, label: '乙一獲派' },
+        'b_2': { count: 0, label: '乙二獲派' },
+        'b_3': { count: 0, label: '乙三獲派' },
+        'b_rest': { count: 0, label: '乙四至乙九獲派' },
+        'unassigned': { count: 0, label: '⚠️ 志願落空 (派借調位)' }
+      };
+
       const SIM_ROUNDS = 1000;
+      const myPartA = [document.getElementById('partA1').value, document.getElementById('partA2').value, document.getElementById('partA3').value].filter(v => v);
 
       for (let r = 0; r < SIM_ROUNDS; r++) {
+        // 每一次抽籤都重新搖取獨立籤號
         let simRN = Math.floor(Math.random() * (TOTAL_HK - 500)) + 300;
-        let simAheadCount = Math.round((simRN / TOTAL_HK) * NET41_CENTRAL_APPLICANTS);
+        let simAheadNet = Math.round((simRN / TOTAL_HK) * NET41_CENTRAL_APPLICANTS);
 
-        let simAlloc = {};
-        SCHOOLS.forEach(s => simAlloc[s.id] = 0);
+        let simAllocA = {};
+        let simAllocB = {};
+        SCHOOLS.forEach(s => { simAllocA[s.id] = 0; simAllocB[s.id] = 0; });
 
-        // 模擬排在前面的其他學生
-        for (let i = 0; i < simAheadCount; i++) {
+        // 模擬排在考生前面的其他學童
+        for (let i = 0; i < simAheadNet; i++) {
           let isBoy = Math.random() < (NET41_CENTRAL_BOYS / NET41_CENTRAL_APPLICANTS);
           let prefs = isBoy ? getOtherBoyPreference() : getOtherGirlPreference();
 
-          for (let p of prefs) {
-            let limit = SCHOOLS.find(s => s.id === p).bQuota;
-            if (simAlloc[p] < limit) {
-              simAlloc[p]++;
+          let gotA = false;
+          for (let pA of prefs.partA) {
+            let sch = SCHOOLS.find(s => s.id === pA);
+            if (sch && simAllocA[pA] < sch.aQuota) {
+              simAllocA[pA]++;
+              gotA = true;
+              break;
+            }
+          }
+          if (!gotA) {
+            for (let pB of prefs.partB) {
+              let sch = SCHOOLS.find(s => s.id === pB);
+              if (sch && simAllocB[pB] < sch.bQuota) {
+                simAllocB[pB]++;
+                break;
+              }
+            }
+          }
+        }
+
+        // 考生本輪派位
+        let candidateWon = false;
+        // 1. 檢驗甲部
+        for (let pA of myPartA) {
+          let sch = SCHOOLS.find(s => s.id === pA);
+          if (sch && simAllocA[pA] < sch.aQuota) {
+            tally['partA'].count++;
+            candidateWon = true;
+            break;
+          }
+        }
+
+        // 2. 若甲部未中，檢驗乙部
+        if (!candidateWon) {
+          for (let idx = 0; idx < myChoicesB.length; idx++) {
+            let pB = myChoicesB[idx];
+            let sch = SCHOOLS.find(s => s.id === pB);
+            if (sch && simAllocB[pB] < sch.bQuota) {
+              if (idx === 0) tally['b_1'].count++;
+              else if (idx === 1) tally['b_2'].count++;
+              else if (idx === 2) tally['b_3'].count++;
+              else tally['b_rest'].count++;
+              candidateWon = true;
               break;
             }
           }
         }
 
-        // 輪到考生本人
-        let gotSeat = false;
-        for (let idx = 0; idx < myChoices.length; idx++) {
-          let schId = myChoices[idx];
-          let limit = SCHOOLS.find(s => s.id === schId).bQuota;
-          if (simAlloc[schId] < limit) {
-            tally[schId].count++;
-            gotSeat = true;
-            break;
-          }
-        }
-        if (!gotSeat) unassignedCount++;
+        if (!candidateWon) tally['unassigned'].count++;
       }
 
       // 渲染統計結果
       grid.innerHTML = '';
-      myChoices.forEach(schId => {
-        let sch = SCHOOLS.find(s => s.id === schId);
-        let data = tally[schId];
-        let pct = ((data.count / SIM_ROUNDS) * 100).toFixed(1);
+      Object.keys(tally).forEach(k => {
+        let item = tally[k];
+        let pct = ((item.count / SIM_ROUNDS) * 100).toFixed(1);
+        let isFail = k === 'unassigned';
 
-        const item = document.createElement('div');
-        item.className = 'monte-item';
-        item.innerHTML = `
+        const elem = document.createElement('div');
+        elem.className = 'monte-item';
+        if (isFail && item.count > 0) elem.style.borderColor = 'var(--red)';
+
+        elem.innerHTML = `
           <div style="display:flex; justify-content:space-between; font-size:0.83rem;">
-            <span><b style="color:var(--gold);">${data.rankLabel}</b> ${sch.name}</span>
-            <span style="font-weight:bold; color:var(--text);">${data.count} 次 (${pct}%)</span>
+            <span style="font-weight:bold; color:${isFail ? 'var(--red)' : (k === 'partA' ? 'var(--blue)' : 'var(--gold)')};">${item.label}</span>
+            <span style="font-weight:bold; color:var(--text);">${item.count} 次 (${pct}%)</span>
           </div>
           <div class="monte-bar-track">
-            <div class="monte-bar-fill" style="width: ${pct}%;"></div>
+            <div class="monte-bar-fill" style="width: ${pct}%; background:${isFail ? 'var(--red)' : (k === 'partA' ? 'var(--blue)' : 'var(--green)')};"></div>
           </div>
         `;
-        grid.appendChild(item);
+        grid.appendChild(elem);
       });
-
-      let failPct = ((unassignedCount / SIM_ROUNDS) * 100).toFixed(1);
-      const failItem = document.createElement('div');
-      failItem.className = 'monte-item';
-      failItem.style.borderColor = failPct > 5 ? 'var(--red)' : 'var(--border)';
-      failItem.innerHTML = `
-        <div style="display:flex; justify-content:space-between; font-size:0.83rem;">
-          <span style="color:var(--red);">⚠️ 志願落空（派外網/借調位）</span>
-          <span style="font-weight:bold; color:var(--red);">${unassignedCount} 次 (${failPct}%)</span>
-        </div>
-        <div class="monte-bar-track">
-          <div class="monte-bar-fill" style="width: ${failPct}%; background: var(--red);"></div>
-        </div>
-      `;
-      grid.appendChild(failItem);
     }, 150);
   }
 
-  // 初始化
-  generateMyNewLottery();
+  // 初始調用
+  rollNewLottery();
+  updateTicketUI();
+  initPartA();
   renderTags();
   renderSchoolsGrid();
 </script>
